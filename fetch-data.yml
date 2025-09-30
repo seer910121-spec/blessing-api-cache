@@ -24,7 +24,7 @@ jobs:
         # 注意：請將 YOUR_APPS_SCRIPT_URL 替換為你的實際網址
         run: |
           # 使用單引號以避免 shell 誤解特殊字元
-          DATA=$(curl -s -L 'YOUR_APPS_SCRIPT_URL')
+          DATA=$(curl -s -L 'https://script.google.com/macros/s/AKfycbwwOq-GBnu1fnkiMM9OidM2UdB71IWsnc9-IY9SUkHThuj72uTqXk68meuh7NS7b9rZ/exec')
           
           # 檢查 curl 是否成功 (狀態碼 0)
           if [ $? -ne 0 ]; then
