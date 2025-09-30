@@ -9,35 +9,46 @@ on:
 jobs:
   fetch_and_cache:
     runs-on: ubuntu-latest
+    
+    # 這是最關鍵的一步：授予 Actions 寫入權限，確保它可以提交 data.json
+    permissions:
+      contents: write 
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Node.js
+      - name: Install Node.js and jq (JSON Processor)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+      
+      - name: Install jq
+        run: sudo apt-get install -y jq
 
       - name: Fetch data from Google Apps Script API
         id: fetch
-        # 使用 curl 命令去呼叫你那慢速的 Apps Script URL
-        # 注意：請將 YOUR_APPS_SCRIPT_URL 替換為你的實際網址
         run: |
-          # 使用單引號以避免 shell 誤解特殊字元
-          DATA=$(curl -s -L 'https://script.google.com/macros/s/AKfycbwwOq-GBnu1fnkiMM9OidM2UdB71IWsnc9-IY9SUkHThuj72uTqXk68meuh7NS7b9rZ/exec')
+          # 🚨🚨🚨 請將 YOUR_APPS_SCRIPT_URL 替換為你的實際網址！🚨🚨🚨
+          # 確保整個網址被單引號 ' ' 完整包住
+          API_URL='https://script.google.com/macros/s/AKfycbwwOq-GBnu1fnkiMM9OidM2UdB71IWsnc9-IY9SUkHThuj72uTqXk68meuh7NS7b9rZ/exec'
           
-          # 檢查 curl 是否成功 (狀態碼 0)
-          if [ $? -ne 0 ]; then
-            echo "::error::Curl failed to fetch data from Apps Script"
+          echo "Fetching data from Apps Script..."
+          DATA=$(curl -s -L "$API_URL")
+          
+          # 檢查 curl 是否成功獲取內容
+          if [ -z "$DATA" ]; then
+            echo "::error::Curl failed or returned empty content."
             exit 1
           fi
           
-          # 檢查回傳內容是否像 JSON (避免錯誤頁面被寫入)
+          # 檢查回傳內容是否為有效的 JSON 格式
           if echo "$DATA" | jq empty 2>/dev/null; then
             echo "$DATA" > data.json
-            echo "Fetched data and saved to data.json"
+            echo "Fetched valid data and saved to data.json"
           else
             echo "::error::Fetched content is not valid JSON. Skipping commit."
+            echo "Returned Data Sample: ${DATA:0:100}..." 
             exit 1
           fi
 
