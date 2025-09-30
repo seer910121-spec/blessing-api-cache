@@ -1,0 +1,51 @@
+name: Fetch and Cache Google Sheet Data
+
+# 設定每小時的第 30 分鐘自動執行，並且在手動觸發時也可以運行
+on:
+  schedule:
+    - cron: '30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  fetch_and_cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch data from Google Apps Script API
+        id: fetch
+        # 使用 curl 命令去呼叫你那慢速的 Apps Script URL
+        # 注意：請將 YOUR_APPS_SCRIPT_URL 替換為你的實際網址
+        run: |
+          # 使用單引號以避免 shell 誤解特殊字元
+          DATA=$(curl -s -L 'YOUR_APPS_SCRIPT_URL')
+          
+          # 檢查 curl 是否成功 (狀態碼 0)
+          if [ $? -ne 0 ]; then
+            echo "::error::Curl failed to fetch data from Apps Script"
+            exit 1
+          fi
+          
+          # 檢查回傳內容是否像 JSON (避免錯誤頁面被寫入)
+          if echo "$DATA" | jq empty 2>/dev/null; then
+            echo "$DATA" > data.json
+            echo "Fetched data and saved to data.json"
+          else
+            echo "::error::Fetched content is not valid JSON. Skipping commit."
+            exit 1
+          fi
+
+      - name: Commit and push changes
+        # 只有在 data.json 有變化的時候才提交
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add data.json
+          git commit -m "Auto-cache: Update data.json from Google Sheet" || echo "No changes to commit"
+          git push
